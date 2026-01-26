@@ -1,7 +1,10 @@
-use bevy::{log::LogPlugin, prelude::*};
+use bevy::{
+    log::LogPlugin, prelude::*
+};
+use bevy_polyline::PolylinePlugin;
 use bevy_skein::SkeinPlugin;
-use cables::*;
 
+use cables::*;
 
 mod cables;
 
@@ -17,20 +20,25 @@ fn main() {
             }),
             SkeinPlugin::default(),
             CablesPlugin,
+            PolylinePlugin,
         ))
-        .add_systems(Startup, add_cable)
+        .add_systems(Startup, setup)
         .run();
 }
 
-fn add_cable(mut commands: Commands) {
+fn setup(mut commands: Commands) {
+    commands.spawn((
+        Transform::from_translation(Vec3::new(-5.0, 0.0, 0.0)).looking_to(Vec3::X, Vec3::Y),
+        Camera3d::default(),
+    ));
+
     let from = commands.spawn((
-        Transform::from_translation(Vec3::ZERO),
+        GlobalTransform::from_translation(Vec3::ZERO),
         CableConnection { connection_point_offset: -0.5 * Vec3::Y },
     )).id();
     let to = commands.spawn((
-        Transform::from_translation(Vec3::Z),
+        GlobalTransform::from_translation(Vec3::new(0.0, 2.0, 3.0)),
         CableConnection { connection_point_offset: -0.5 * Vec3::Y },
     )).id();
     spawn_cable(&mut commands, &from, &to);
 }
-

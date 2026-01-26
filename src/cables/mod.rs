@@ -1,10 +1,17 @@
-use bevy::prelude::*;
+use bevy::{color::palettes::css::{BLUE, GREEN, RED, GRAY}, prelude::*};
+use bevy_polyline::prelude::*;
 
+use crate::cables::catenary::get_parabola;
+
+mod catenary;
 
 pub struct CablesPlugin;
 impl Plugin for CablesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(generate_added_cables);
+        app
+        .init_gizmo_group::<CableGizmos>()
+        .add_observer(generate_added_cables)
+        .add_systems(Update, cable_gizmos);
     }
 }
 
@@ -38,13 +45,15 @@ struct StartsFrom(Entity);
 #[relationship(relationship_target = CablesEndingHere)]
 struct EndsAt(Entity);
 
-#[derive(Component, Reflect)]
+#[derive(Component)]
 struct Cable {
     generated: bool,
-    segments_per_unit_length: u64,
+    segment_num: u64,
+    segments: Vec<Vec3>,
+    pub color: LinearRgba,
 }
 impl Default for Cable {
-    fn default() -> Self { Cable { generated: false, segments_per_unit_length: 1 } }
+    fn default() -> Self { Cable { generated: false, segment_num: 5, segments: Vec::new(), color: GRAY.into() } }
 }
 
 // spawn a cable with given endpoints.
@@ -60,26 +69,58 @@ pub fn spawn_cable(commands: &mut Commands, start_point: &Entity, end_point: &En
 // generate meshes for cables that have been added in the last tick.
 fn generate_added_cables(
     event: On<Add, Cable>,
-    mut added_cables: Query<(&mut Cable, &StartsFrom, &EndsAt)>,
+    mut commands: Commands,
+    mut added_cables: Query<(Entity, &mut Cable, &StartsFrom, &EndsAt)>,
     cable_connections: Query<(&GlobalTransform, &CableConnection)>,
+    mut polylines: ResMut<Assets<Polyline>>,
+    mut polyline_materials: ResMut<Assets<PolylineMaterial>>,
 ) {
     debug!("generating added cable...");
-    let (mut cable, cable_start, cable_end) = added_cables.get_mut(event.entity).unwrap();
+    let (cable_entity, mut cable, cable_start, cable_end) = added_cables.get_mut(event.entity).unwrap();
     let (start_transform, start_connection) = cable_connections.get(cable_start.0).unwrap();
     let (end_transform, end_connection) = cable_connections.get(cable_end.0).unwrap();
 
     let start_pos = start_transform.translation() + start_connection.connection_point_offset;
     let end_pos = end_transform.translation() + end_connection.connection_point_offset;
 
-    // todo (with my approximation as to how hard each task will be): 
-    // 1. (medium) create a function Catenary that takes in parameter t \in [0, 1], start pos, end pos and length and returns the catenary position at t
-    // 2. (one line) create a FunctionCurve catenary_curve by supplying |t| Catenary(start_pos, end_pos, length, t)
-    // 3. (one line) sample catenary_curve using Cable.segments_per_unit_length, t, and length (should be enough information, need to do the math on this)
-    // 4. (hard) generate mesh or use shaders to display rope 
-    //    (not sure how to do this yet.. look into https://bevy.org/examples/shaders/automatic-instancing/ and https://sotrh.github.io/learn-wgpu/beginner/tutorial3-pipeline/#wgsl)
-    // 5. (medium) in a separate system, add stuff like wind sim using sin disturbations
-    
+    // create FunctionCurve and sample at segments
+    let curve = FunctionCurve::new(Interval::UNIT, |t| get_parabola(t, start_pos, end_pos).unwrap());
+    let samples: Vec<Vec3> = (0..=cable.segment_num).map(|x| curve.sample(x as f32 / cable.segment_num as f32).unwrap()).collect();
+
+    // insert polyline
+    commands.entity(cable_entity).insert(PolylineBundle {
+        polyline: PolylineHandle(polylines.add(Polyline { vertices: samples.clone() })),
+        material: PolylineMaterialHandle(polyline_materials.add(PolylineMaterial {
+            width: 2.0,
+            color: cable.color,
+            perspective: false,
+            ..default()
+        })),
+        ..default()
+    });
+    cable.generated = true;
+    cable.segments = samples;
 }
+
+// We can create our own gizmo config group!
+#[derive(Default, Reflect, GizmoConfigGroup)]
+struct CableGizmos;
+
+fn cable_gizmos(
+    mut gizmos: Gizmos<CableGizmos>,
+    cables: Query<(&StartsFrom, &EndsAt), With<Cable>>,
+    cable_connections: Query<(&GlobalTransform, &CableConnection)>,
+) {
+    for (from, to) in cables {
+        let (from_transform, from_conn) = cable_connections.get(from.0).unwrap();
+        let (to_transform, to_conn) = cable_connections.get(to.0).unwrap();
+        gizmos.sphere(from_transform.to_isometry(), 0.1, RED);
+        gizmos.line(from_transform.translation(), from_transform.transform_point(from_conn.connection_point_offset), RED);
+        gizmos.sphere(to_transform.to_isometry(), 0.1, BLUE);
+        gizmos.line(to_transform.translation(), to_transform.transform_point(to_conn.connection_point_offset), BLUE);
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
