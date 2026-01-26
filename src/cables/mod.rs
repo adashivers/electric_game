@@ -95,9 +95,9 @@ fn generate_added_cables(
     commands.entity(cable_entity).insert(PolylineBundle {
         polyline: PolylineHandle(polylines.add(Polyline { vertices: samples.clone() })),
         material: PolylineMaterialHandle(polyline_materials.add(PolylineMaterial {
-            width: 2.0,
+            width: 10.0,
             color: cable.color,
-            perspective: false,
+            perspective: true,
             ..default()
         })),
         ..default()
