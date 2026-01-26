@@ -2,12 +2,12 @@ use core::f32;
 
 use bevy::{math::FloatPow, prelude::*};
 
-pub(super) fn get_parabola(t: f32, start_pos: Vec3, end_pos: Vec3) -> Option<Vec3> {
+pub(super) fn get_parabola(t: f32, start_pos: Vec3, end_pos: Vec3, hang: f32) -> Option<Vec3> {
     let dxz = end_pos.xz() - start_pos.xz();
     
     let dy = end_pos.y - start_pos.y;
     let dx = dxz.length();
-    let k = dy.max(0.0);
+    let k = (dy+hang).max(hang);
 
     match dy == 0.0 {
         true => {

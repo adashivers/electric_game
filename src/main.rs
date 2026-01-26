@@ -40,5 +40,5 @@ fn setup(mut commands: Commands) {
         GlobalTransform::from_translation(Vec3::new(0.0, 2.0, 3.0)),
         CableConnection { connection_point_offset: -0.5 * Vec3::Y },
     )).id();
-    spawn_cable(&mut commands, &from, &to);
+    spawn_cable(&mut commands, &from, &to, 0.2);
 }

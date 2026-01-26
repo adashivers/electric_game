@@ -51,16 +51,20 @@ struct Cable {
     segment_num: u64,
     segments: Vec<Vec3>,
     pub color: LinearRgba,
+    hang: f32
 }
 impl Default for Cable {
-    fn default() -> Self { Cable { generated: false, segment_num: 5, segments: Vec::new(), color: GRAY.into() } }
+    fn default() -> Self { Cable { generated: false, segment_num: 10, segments: Vec::new(), color: GRAY.into(), hang: 1.0 } }
 }
 
 // spawn a cable with given endpoints.
 // this only creates the entity with base components. the actual meshes of the cables will be created the next time the cable generating system runs.
-pub fn spawn_cable(commands: &mut Commands, start_point: &Entity, end_point: &Entity) -> Entity {
+pub fn spawn_cable(commands: &mut Commands, start_point: &Entity, end_point: &Entity, hang: f32) -> Entity {
     commands.spawn((
-        Cable::default(),
+        Cable {
+            hang,
+            ..default()
+        },
         StartsFrom(*start_point),
         EndsAt(*end_point),
     )).id()
@@ -84,7 +88,7 @@ fn generate_added_cables(
     let end_pos = end_transform.translation() + end_connection.connection_point_offset;
 
     // create FunctionCurve and sample at segments
-    let curve = FunctionCurve::new(Interval::UNIT, |t| get_parabola(t, start_pos, end_pos).unwrap());
+    let curve = FunctionCurve::new(Interval::UNIT, |t| get_parabola(t, start_pos, end_pos, cable.hang).unwrap());
     let samples: Vec<Vec3> = (0..=cable.segment_num).map(|x| curve.sample(x as f32 / cable.segment_num as f32).unwrap()).collect();
 
     // insert polyline
@@ -139,7 +143,7 @@ mod tests {
         let world = app.world_mut();
         let (from, to) = spawn_some_endpoints(world);
 
-        let cable_entity = spawn_cable(&mut world.commands(), &from, &to);
+        let cable_entity = spawn_cable(&mut world.commands(), &from, &to, 2.0);
         world.flush();
 
         let mut query_state = world.query::<(&Cable, &StartsFrom, &EndsAt)>();
