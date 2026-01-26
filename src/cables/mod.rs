@@ -1,9 +1,9 @@
-use bevy::{color::palettes::css::{BLUE, GREEN, RED, GRAY}, prelude::*};
+use bevy::{color::palettes::css::{BLUE, RED, GRAY}, prelude::*};
 use bevy_polyline::prelude::*;
 
-use crate::cables::catenary::get_parabola;
+use crate::cables::parabola::get_parabola;
 
-mod catenary;
+mod parabola;
 
 pub struct CablesPlugin;
 impl Plugin for CablesPlugin {
