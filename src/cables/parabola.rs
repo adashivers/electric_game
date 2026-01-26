@@ -3,13 +3,14 @@ use core::f32;
 use bevy::{math::FloatPow, prelude::*};
 
 pub(super) fn get_parabola(t: f32, start_pos: Vec3, end_pos: Vec3, hang: f32) -> Option<Vec3> {
+    if hang < 0.0 { return None }
     let dxz = end_pos.xz() - start_pos.xz();
     
     let dy = end_pos.y - start_pos.y;
     let dx = dxz.length();
     let k = (dy+hang).max(hang);
 
-    match dy == 0.0 {
+    match k == 0.0 {
         true => {
             Some(start_pos.move_towards(end_pos, t))
         }
