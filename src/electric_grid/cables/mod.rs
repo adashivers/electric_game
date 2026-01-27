@@ -1,16 +1,21 @@
-use bevy::{color::palettes::css::{BLUE, RED, GRAY}, prelude::*};
+use bevy::{color::palettes::css::{BLUE, GREY, RED}, prelude::*};
 use bevy_polyline::prelude::*;
-
-use crate::cables::parabola::get_parabola;
+use parabola::*;
 
 mod parabola;
+
+static HANG: f32 = 5.0;
 
 pub struct CablesPlugin;
 impl Plugin for CablesPlugin {
     fn build(&self, app: &mut App) {
         app
         .init_gizmo_group::<CableGizmos>()
-        .add_observer(generate_added_cables)
+        .insert_gizmo_config(CableGizmos, GizmoConfig {
+            depth_bias: -1.0,
+            ..default()
+        })
+        .add_systems(Last, generate_added_cables)
         .add_systems(Update, cable_gizmos);
     }
 }
@@ -27,6 +32,7 @@ will keep track of cables connecting to it in an oriented way.
 #[require(GlobalTransform, CablesStartingHere, CablesEndingHere)]
 pub struct CableConnection {
     pub connection_point_offset: Vec3,
+    pub index: u32,
 }
 
 #[derive(Component ,Default)]
@@ -37,11 +43,11 @@ struct CablesStartingHere(Vec<Entity>);
 #[relationship_target(relationship = EndsAt)]
 struct CablesEndingHere(Vec<Entity>);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 #[relationship(relationship_target = CablesStartingHere)]
 struct StartsFrom(Entity);
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 #[relationship(relationship_target = CablesEndingHere)]
 struct EndsAt(Entity);
 
@@ -54,15 +60,17 @@ struct Cable {
     hang: f32
 }
 impl Default for Cable {
-    fn default() -> Self { Cable { generated: false, segment_num: 10, segments: Vec::new(), color: GRAY.into(), hang: 1.0 } }
+    fn default() -> Self { Cable { generated: false, segment_num: 10, segments: Vec::new(), color: GREY.into(), hang: 1.0 } }
 }
 
 // spawn a cable with given endpoints.
 // this only creates the entity with base components. the actual meshes of the cables will be created the next time the cable generating system runs.
-pub fn spawn_cable(commands: &mut Commands, start_point: &Entity, end_point: &Entity, hang: f32) -> Entity {
+pub fn spawn_cable(commands: &mut Commands, start_point: &Entity, end_point: &Entity, hang: Option<f32>) -> Entity {
+    
     commands.spawn((
+        Name::new("Cable"),
         Cable {
-            hang,
+            hang: hang.unwrap_or(HANG),
             ..default()
         },
         StartsFrom(*start_point),
@@ -72,38 +80,39 @@ pub fn spawn_cable(commands: &mut Commands, start_point: &Entity, end_point: &En
 
 // generate meshes for cables that have been added in the last tick.
 fn generate_added_cables(
-    event: On<Add, Cable>,
     mut commands: Commands,
-    mut added_cables: Query<(Entity, &mut Cable, &StartsFrom, &EndsAt)>,
+    added_cables: Query<(Entity, &mut Cable, &StartsFrom, &EndsAt), Added<Cable>>,
     cable_connections: Query<(&GlobalTransform, &CableConnection)>,
     mut polylines: ResMut<Assets<Polyline>>,
     mut polyline_materials: ResMut<Assets<PolylineMaterial>>,
 ) {
-    debug!("generating added cable...");
-    let (cable_entity, mut cable, cable_start, cable_end) = added_cables.get_mut(event.entity).unwrap();
-    let (start_transform, start_connection) = cable_connections.get(cable_start.0).unwrap();
-    let (end_transform, end_connection) = cable_connections.get(cable_end.0).unwrap();
+    
+    for (cable_entity, mut cable, cable_start, cable_end) in added_cables {
+        let (start_transform, start_connection) = cable_connections.get(cable_start.0).unwrap();
+        let (end_transform, end_connection) = cable_connections.get(cable_end.0).unwrap();
 
-    let start_pos = start_transform.translation() + start_connection.connection_point_offset;
-    let end_pos = end_transform.translation() + end_connection.connection_point_offset;
+        let start_pos = start_transform.translation() + start_connection.connection_point_offset;
+        let end_pos = end_transform.translation() + end_connection.connection_point_offset;
 
-    // create FunctionCurve and sample at segments
-    let curve = FunctionCurve::new(Interval::UNIT, |t| get_parabola(t, start_pos, end_pos, cable.hang).unwrap());
-    let samples: Vec<Vec3> = (0..=cable.segment_num).map(|x| curve.sample(x as f32 / cable.segment_num as f32).unwrap()).collect();
+        // create FunctionCurve and sample at segments
+        let curve = FunctionCurve::new(Interval::UNIT, |t| get_parabola(t, start_pos, end_pos, cable.hang).unwrap());
+        let samples: Vec<Vec3> = (0..=cable.segment_num).map(|x| curve.sample(x as f32 / cable.segment_num as f32).unwrap()).collect();
 
-    // insert polyline
-    commands.entity(cable_entity).insert(PolylineBundle {
-        polyline: PolylineHandle(polylines.add(Polyline { vertices: samples.clone() })),
-        material: PolylineMaterialHandle(polyline_materials.add(PolylineMaterial {
-            width: 10.0,
-            color: cable.color,
-            perspective: true,
+        // insert polyline
+        debug!("generating added cable with endpoints at {:?} and {:?}", start_pos, end_pos);
+        commands.entity(cable_entity).insert(PolylineBundle {
+            polyline: PolylineHandle(polylines.add(Polyline { vertices: samples.clone() })),
+            material: PolylineMaterialHandle(polyline_materials.add(PolylineMaterial {
+                width: 10.0,
+                color: cable.color,
+                perspective: true,
+                ..default()
+            })),
             ..default()
-        })),
-        ..default()
-    });
-    cable.generated = true;
-    cable.segments = samples;
+        });
+        cable.generated = true;
+        cable.segments = samples;
+    }
 }
 
 // We can create our own gizmo config group!
@@ -143,7 +152,7 @@ mod tests {
         let world = app.world_mut();
         let (from, to) = spawn_some_endpoints(world);
 
-        let cable_entity = spawn_cable(&mut world.commands(), &from, &to, 2.0);
+        let cable_entity = spawn_cable(&mut world.commands(), &from, &to, None);
         world.flush();
 
         let mut query_state = world.query::<(&Cable, &StartsFrom, &EndsAt)>();
