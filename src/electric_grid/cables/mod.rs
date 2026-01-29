@@ -4,7 +4,8 @@ use parabola::*;
 
 mod parabola;
 
-static HANG: f32 = 5.0;
+static HANG: f32 = 2.0;
+static CABLE_THICKNESS: f32 = 15.0;
 
 pub struct CablesPlugin;
 impl Plugin for CablesPlugin {
@@ -103,7 +104,7 @@ fn generate_added_cables(
         commands.entity(cable_entity).insert(PolylineBundle {
             polyline: PolylineHandle(polylines.add(Polyline { vertices: samples.clone() })),
             material: PolylineMaterialHandle(polyline_materials.add(PolylineMaterial {
-                width: 10.0,
+                width: CABLE_THICKNESS,
                 color: cable.color,
                 perspective: true,
                 ..default()

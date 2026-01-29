@@ -6,8 +6,10 @@ use bevy::{
 use bevy_skein::SkeinPlugin;
 use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use electric_grid::*;
+use ui::*;
 
 mod electric_grid;
+mod ui;
 
 
 fn main() {
@@ -20,6 +22,7 @@ fn main() {
                 ..Default::default()
             }),
             SkeinPlugin::default(),
+            UIPlugin,
         ))
         .add_plugins(ElectricGridPlugin)
         .add_plugins(EguiPlugin::default())
@@ -33,7 +36,7 @@ fn setup(mut commands: Commands) {
     debug!("start setup");
     // spawn camera
     commands.spawn((
-        Transform::from_translation(Vec3::new(75.0, 30.0, -50.0)).looking_at(Vec3::new(75.0, 0.0, 0.0), Vec3::Y),
+        Transform::from_translation(Vec3::new(25.0, 30.0, -100.0)).looking_at(Vec3::new(75.0, 0.0, 0.0), Vec3::Y),
         Camera3d::default(),
     ));
 
