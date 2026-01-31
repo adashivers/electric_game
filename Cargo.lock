@@ -1227,6 +1227,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_pretty_text"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae9d9cbbb58a812053ec619f46a606ac756b9d96f4372d43b8f39902f412d7be"
+dependencies = [
+ "bevy",
+ "bytemuck",
+ "dyn-clone",
+ "pretty_text_macros",
+ "pretty_text_parser",
+ "rand",
+ "serde",
+ "thiserror 2.0.18",
+ "winnow",
+]
+
+[[package]]
 name = "bevy_ptr"
 version = "0.17.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2027,6 +2044,15 @@ dependencies = [
 
 [[package]]
 name = "convert_case"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baaaa0ecca5b51987b9423ccdc971514dd8b0bb7b4060b983d3664dad3f1f89f"
+dependencies = [
+ "unicode-segmentation",
+]
+
+[[package]]
+name = "convert_case"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "633458d4ef8c78b72454de2d54fd6ab2e60f9e02be22f3c6104cdc8a4e0fceb9"
@@ -2259,7 +2285,7 @@ version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
 dependencies = [
- "convert_case",
+ "convert_case 0.10.0",
  "proc-macro2",
  "quote",
  "rustc_version",
@@ -2339,6 +2365,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
 name = "ecolor"
 version = "0.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2378,6 +2410,8 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_polyline",
+ "bevy_pretty_text",
+ "bevy_reflect",
  "bevy_skein",
 ]
 
@@ -4258,6 +4292,35 @@ name = "presser"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8cf8e6a8aa66ce33f63993ffc4ea4271eb5b0530a9002db8455ea6050c77bfa"
+
+[[package]]
+name = "pretty_text_macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b839e37ccb5c3344b144c64b13bf95a68c164436ac69dc022ea09048d062dcb3"
+dependencies = [
+ "bevy_macro_utils",
+ "convert_case 0.8.0",
+ "pretty_text_parser",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "pretty_text_parser"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eed97dd3d512e5afd601ddda3a7af7a4976bbb2b01ddc74c6d03f6582ff4111a"
+dependencies = [
+ "bevy",
+ "convert_case 0.8.0",
+ "proc-macro2",
+ "quote",
+ "smallvec",
+ "thiserror 2.0.18",
+ "winnow",
+]
 
 [[package]]
 name = "proc-macro-crate"

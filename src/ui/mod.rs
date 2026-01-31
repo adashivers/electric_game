@@ -1,44 +1,60 @@
 use bevy::{color::palettes::css::BLACK, prelude::*};
-
+use bevy_pretty_text::prelude::*;
 
 pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_systems(Startup, (load_fonts, spawn_layout).chain());
+        .add_plugins(PrettyTextPlugin)
+        .add_systems(Startup, (load_fonts_and_styles, spawn_layout).chain());
     }
 }
 
-#[derive(Resource)]
-struct SparkFont(Handle<Font>);
+fn load_fonts_and_styles(
+    mut commands: Commands, 
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<Glitch>>
 
-fn load_fonts(
-    mut commands: Commands, asset_server: Res<AssetServer>
 ) {
-    commands.insert_resource(SparkFont(
-        asset_server.load::<Font>("fonts/BlockBlueprint.ttf")
+    let font = asset_server.load::<Font>("fonts/BlockBlueprint.ttf");
+
+    commands.spawn((
+        PrettyStyle("spark"),
+        effects![Fade {
+            frequency: 10.0,
+            min: 0.7,
+            max: 1.0,
+            offset: 1.0,
+        }],
+        PrettyTextMaterial(materials.add(Glitch{
+            intensity: 0.02,
+            frequency: 50.,
+            speed: 8.,
+            threshold: 0.95,
+        })),
+        TextFont {
+            // This font is loaded and will be used instead of the default font.
+            font,
+            font_size: 17.0,
+            font_smoothing: bevy::text::FontSmoothing::None,
+            ..default()
+        },
+
+        TextColor::WHITE,
+        
     ));
 }
 
 fn spawn_layout(
     mut commands: Commands, 
-    spark_font: Res<SparkFont>,
 ) {
     // Text with one section
     commands.spawn((
-        // Accepts a `String` or any type that converts into a `String`, such as `&str`
-        Text::new("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu. In enim justo, rhoncus ut, imperdiet a, venenatis vitae, justo. Nullam dictum felis eu pede mollis pretium. Integer tincidunt. Cras dapibus. Vivamus elementum semper nisi. Aenean vulputate eleifend tellus. Aenean leo ligula, porttitor eu, consequat vitae, eleifend ac, enim. Aliquam lorem ante, dapibus in, viverra quis, feugiat a, tellus. Phasellus viverra nulla ut metus varius laoreet. Quisque rutrum. Aenean imperdiet. Etiam ultricies nisi vel augue. Curabitur ullamcorper ultricies nisi. Nam eget dui. Etiam rhoncus. Maecenas tempus, tellus eget condimentum rhoncus, sem quam semper libero, sit amet adipiscing sem neque sed ipsum. Nam quam nunc, blandit vel, luctus pulvinar, hendrerit id, lorem. Maecenas nec odio et ante tincidunt tempus. Donec vitae sapien ut libero venenatis faucibus. Nullam quis ante. Etiam sit amet orci eget eros faucibus tincidunt. Duis leo. Sed fringilla mauris sit amet nibh. Donec sodales sagittis magna. Sed consequat, leo eget bibendum sodales, augue velit cursus nunc, "),
-        TextFont {
-            // This font is loaded and will be used instead of the default font.
-            font: spark_font.0.clone(),
-            font_size: 17.0,
-            font_smoothing: bevy::text::FontSmoothing::None,
-            ..default()
-        },
-        TextBackgroundColor(BLACK.into()),
-        TextShadow::default(),
-        // Set the justification of the Text
+        Typewriter::new(40.),
+        TypewriterIndex::glyph(),
         TextLayout::new_with_justify(Justify::Left),
+        TextBackgroundColor(BLACK.into()),
+        pretty!("[little spark....|0.2| coming from a place of such violence...|0.2| what does that make you?|1| the conditions of your existence are part of the great fabric humans have woven onto the web of the world.|1| yet, unlike the humans of this world...|0.2| your movement has only a single axis of freedom.\n|2| soar through the power lines, through ceramic containers of transmission towers, through substations that will change your nature.|1| sing your little song of spark and three-phased vibration.\n|2|i hope you are the catalyst of change.|0.2|i love you.|1|](spark)"),
         // Set the style of the Node itself.
         Node {
             position_type: PositionType::Absolute,
