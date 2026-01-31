@@ -1,12 +1,19 @@
-use std::f32::consts::{FRAC_PI_2, PI};
+use std::f32::consts::{PI};
 
 use bevy::{
-    asset::LoadState, input::mouse::AccumulatedMouseMotion, log::LogPlugin, prelude::*
+    camera::ScalingMode,
+    asset::LoadState, 
+    color::palettes::css::GREEN, 
+    dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin, FrameTimeGraphConfig}, 
+    log::LogPlugin, 
+    prelude::*
 };
 use bevy_skein::SkeinPlugin;
-use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
+// use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use electric_grid::*;
 use ui::*;
+
+use crate::electric_grid::{cables::Cable, spark_movement::Spark};
 
 mod electric_grid;
 mod ui;
@@ -23,22 +30,42 @@ fn main() {
             }),
             SkeinPlugin::default(),
             UIPlugin,
+            FpsOverlayPlugin {
+                config: FpsOverlayConfig {
+                    text_config: TextFont {
+                        // Here we define size of our overlay
+                        font_size: 42.0,
+                        // If we want, we can use a custom font
+                        font: default(),
+                        // We could also disable font smoothing,
+                        ..default()
+                    },
+                    // We can also change color of the overlay
+                    text_color: GREEN.into(),
+                    // We can also set the refresh interval for the FPS counter
+                    refresh_interval: core::time::Duration::from_millis(100),
+                    enabled: true,
+                    frame_time_graph_config: FrameTimeGraphConfig {
+                        enabled: true,
+                        // The minimum acceptable fps
+                        min_fps: 30.0,
+                        // The target fps
+                        target_fps: 144.0,
+                    },
+                },
+            },
+
         ))
         .add_plugins(ElectricGridPlugin)
-        .add_plugins(EguiPlugin::default())
-        .add_plugins(WorldInspectorPlugin::new())
+        //.add_plugins(EguiPlugin::default())
+        //.add_plugins(WorldInspectorPlugin::new())
         .add_systems(Startup, setup)
-        .add_systems(Update, (spawn_towers, move_camera))
+        .add_systems(Update, (spawn_spark, spawn_towers))
         .run();
 }
 
 fn setup(mut commands: Commands) {
     debug!("start setup");
-    // spawn camera
-    commands.spawn((
-        Transform::from_translation(Vec3::new(25.0, 30.0, -100.0)).looking_at(Vec3::new(75.0, 0.0, 0.0), Vec3::Y),
-        Camera3d::default(),
-    ));
 
     // directional 'sun' light
     commands.spawn((
@@ -53,6 +80,26 @@ fn setup(mut commands: Commands) {
             ..default()
         },
     ));
+}
+
+fn spawn_spark(mut commands: Commands, cables: Query<Entity, With<Cable>>, mut used: Local<bool>) {
+    if *used { return }
+    // spawn at random first cable
+    if let Some(cable_entity) = cables.iter().next() {
+        commands.spawn((
+            Spark::new(cable_entity, 1.0),
+        )).with_child((
+            Transform::from_translation(Vec3::new(100.0, 30.0, -100.0)).looking_at(Vec3::Y * 20.0, Vec3::Y),
+            Camera3d::default(),
+            Projection::Orthographic(OrthographicProjection {
+                scaling_mode: ScalingMode::WindowSize,
+                scale: 0.15,
+                ..OrthographicProjection::default_3d()
+            }),
+        ));
+        commands.trigger(SpawnText);
+        *used = true;
+    }
 }
 
 fn spawn_towers(
@@ -80,7 +127,7 @@ fn spawn_towers(
 }
 
 
-
+/*
 fn move_camera(accumulated_mouse_motion: Res<AccumulatedMouseMotion>,
     player: Single<&mut Transform, With<Camera>>,
 ) {
@@ -113,3 +160,4 @@ fn move_camera(accumulated_mouse_motion: Res<AccumulatedMouseMotion>,
         transform.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, roll);
     }
 }
+*/

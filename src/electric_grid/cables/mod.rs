@@ -5,7 +5,7 @@ use parabola::*;
 mod parabola;
 
 static HANG: f32 = 2.0;
-static CABLE_THICKNESS: f32 = 15.0;
+static CABLE_THICKNESS: f32 = 3.0;
 
 pub struct CablesPlugin;
 impl Plugin for CablesPlugin {
@@ -38,28 +38,40 @@ pub struct CableConnection {
 
 #[derive(Component ,Default)]
 #[relationship_target(relationship = StartsFrom)]
-struct CablesStartingHere(Vec<Entity>);
+pub struct CablesStartingHere(Vec<Entity>);
 
 #[derive(Component ,Default)]
 #[relationship_target(relationship = EndsAt)]
-struct CablesEndingHere(Vec<Entity>);
+pub struct CablesEndingHere(Vec<Entity>);
 
 #[derive(Component, Reflect)]
 #[relationship(relationship_target = CablesStartingHere)]
-struct StartsFrom(Entity);
+pub struct StartsFrom(pub Entity);
 
 #[derive(Component, Reflect)]
 #[relationship(relationship_target = CablesEndingHere)]
-struct EndsAt(Entity);
+pub struct EndsAt(pub Entity);
 
 #[derive(Component)]
-struct Cable {
+pub struct Cable {
     generated: bool,
     segment_num: u64,
     segments: Vec<Vec3>,
     pub color: LinearRgba,
     hang: f32
 }
+
+impl Cable {
+    pub fn get_pos_along(&self, t: f32) -> Vec3 {
+        if !Interval::UNIT.contains(t) {
+            error!("cable position requested for parameter outside unit interval");
+        }
+        // TODO: make it so there is a sample curve already in the cable struct, maybe replace the segments, as this would already have that data.
+        SampleAutoCurve::new(Interval::UNIT, self.segments.clone()).unwrap().sample(t).unwrap()
+
+    }
+}
+
 impl Default for Cable {
     fn default() -> Self { Cable { generated: false, segment_num: 10, segments: Vec::new(), color: GREY.into(), hang: 1.0 } }
 }
@@ -106,7 +118,7 @@ fn generate_added_cables(
             material: PolylineMaterialHandle(polyline_materials.add(PolylineMaterial {
                 width: CABLE_THICKNESS,
                 color: cable.color,
-                perspective: true,
+                perspective: false,
                 ..default()
             })),
             ..default()

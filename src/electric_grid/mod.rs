@@ -1,9 +1,10 @@
 use bevy::{platform::collections::HashMap, prelude::*, scene::SceneInstanceReady};
 use bevy_polyline::PolylinePlugin;
 use cables::*;
+use spark_movement::*;
 
 pub mod cables;
-
+pub mod spark_movement;
 
 
 pub struct ElectricGridPlugin;
@@ -13,6 +14,7 @@ impl Plugin for ElectricGridPlugin {
         .add_plugins((
             CablesPlugin,
             PolylinePlugin,
+            SparkMovementPlugin,
         ))
         .add_observer(connect_cables)
         .add_observer(use_tower_spawners)

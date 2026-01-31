@@ -6,7 +6,8 @@ impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
         .add_plugins(PrettyTextPlugin)
-        .add_systems(Startup, (load_fonts_and_styles, spawn_layout).chain());
+        .add_systems(Startup, load_fonts_and_styles)
+        .add_observer(spawn_text);
     }
 }
 
@@ -20,18 +21,20 @@ fn load_fonts_and_styles(
 
     commands.spawn((
         PrettyStyle("spark"),
-        effects![Fade {
-            frequency: 10.0,
-            min: 0.7,
-            max: 1.0,
-            offset: 1.0,
-        }],
-        PrettyTextMaterial(materials.add(Glitch{
-            intensity: 0.02,
-            frequency: 50.,
-            speed: 8.,
-            threshold: 0.95,
-        })),
+        effects![
+            Fade {
+                frequency: 10.0,
+                min: 0.7,
+                max: 1.0,
+                offset: 1.0,
+            },
+            PrettyTextMaterial(materials.add(Glitch{
+                intensity: 0.02,
+                frequency: 50.,
+                speed: 8.,
+                threshold: 0.95,
+            })),
+        ],
         TextFont {
             // This font is loaded and will be used instead of the default font.
             font,
@@ -45,12 +48,16 @@ fn load_fonts_and_styles(
     ));
 }
 
-fn spawn_layout(
+#[derive(Event)]
+pub struct SpawnText;
+
+fn spawn_text(
+    _trigger: On<SpawnText>,
     mut commands: Commands, 
 ) {
     // Text with one section
     commands.spawn((
-        Typewriter::new(40.),
+        Typewriter::new(30.),
         TypewriterIndex::glyph(),
         TextLayout::new_with_justify(Justify::Left),
         TextBackgroundColor(BLACK.into()),
