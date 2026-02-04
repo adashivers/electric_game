@@ -10,7 +10,7 @@ impl Plugin for UIPlugin {
         .init_resource::<TextQueue>()
         .add_plugins(PrettyTextPlugin)
         .add_systems(Startup, load_ui)
-        .add_systems(Update, process_text_queue)
+        .add_systems(Update, text_display)
         .add_observer(on_spawn_text)
         .add_observer(on_typewriter_finished);
     }
@@ -79,7 +79,7 @@ fn load_ui(
     ));
 }
 
-fn process_text_queue(
+fn text_display(
     mut commands: Commands, 
     mut text_queue: ResMut<TextQueue>, 
     mut keyboard: ResMut<ButtonInput<KeyCode>>,
@@ -92,17 +92,18 @@ fn process_text_queue(
         match text_box.single() {
             Ok(entity) => {
                 if text_queue.is_writing {
+                    debug!("skipping text");
                     commands.entity(entity).insert(FinishTypewriter);
                 } else {
+                    debug!("clearing text");
                     commands.entity(entity).despawn();
                 }
             },
             _ => {}
         }
     }
-
     // display next text
-    if !text_queue.is_writing && !text_queue.is_empty() {
+    else if !text_queue.is_writing && !text_queue.is_empty() {
         let do_write = match text_box.single() {
             Ok(entity) => {
                 if pressed_advance {
