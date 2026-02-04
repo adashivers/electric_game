@@ -88,10 +88,15 @@ fn process_text_queue(
     let pressed_advance = keyboard.clear_just_pressed(KeyCode::KeyZ);
 
     // skip text load
-    if text_queue.is_writing && pressed_advance {
+    if pressed_advance {
         match text_box.single() {
             Ok(entity) => {
-                commands.entity(entity).insert(FinishTypewriter);
+                if text_queue.is_writing {
+                    commands.entity(entity).insert(FinishTypewriter);
+                } else {
+                    commands.entity(entity).despawn();
+                }
+                
             },
             _ => unreachable!()
         }
