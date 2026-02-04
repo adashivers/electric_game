@@ -1,4 +1,4 @@
-use std::f32::consts::{PI};
+use std::{f32::consts::PI, str::FromStr};
 
 use bevy::{
     camera::ScalingMode,
@@ -82,7 +82,12 @@ fn setup(mut commands: Commands) {
     ));
 }
 
-fn spawn_spark(mut commands: Commands, cables: Query<Entity, With<Cable>>, mut used: Local<bool>) {
+fn spawn_spark(
+    mut commands: Commands, 
+    cables: Query<Entity, With<Cable>>, 
+    mut text_queue: ResMut<TextQueue>,
+    mut used: Local<bool>
+) {
     if *used { return }
     // spawn at random first cable
     if let Some(cable_entity) = cables.iter().next() {
@@ -97,7 +102,8 @@ fn spawn_spark(mut commands: Commands, cables: Query<Entity, With<Cable>>, mut u
                 ..OrthographicProjection::default_3d()
             }),
         ));
-        commands.trigger(SpawnText);
+        text_queue.push_text("[little spark....|0.2| coming from a place of such violence...|0.2| what does that make you?|1| the conditions of your existence are part of the great fabric humans have woven onto the web of the world.|1| yet, unlike the humans of this world...|0.2| your movement has only a single axis of freedom.\n|2| soar through the power lines, through ceramic containers of transmission towers, through substations that will change your nature.|1| sing your little song of spark and three-phased vibration.\n|2|i hope you are the catalyst of change.|0.2|i love you.|1|](spark)");
+        text_queue.push_text("test");
         *used = true;
     }
 }

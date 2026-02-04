@@ -1,24 +1,55 @@
-use bevy::{color::palettes::css::BLACK, prelude::*};
+use std::{collections::VecDeque, str::FromStr};
+
+use bevy::prelude::*;
 use bevy_pretty_text::prelude::*;
 
 pub struct UIPlugin;
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
         app
+        .init_resource::<TextQueue>()
         .add_plugins(PrettyTextPlugin)
-        .add_systems(Startup, load_fonts_and_styles)
-        .add_observer(spawn_text);
+        .add_systems(Startup, load_ui)
+        .add_systems(Update, process_text_queue)
+        .add_observer(on_spawn_text)
+        .add_observer(on_typewriter_finished);
     }
 }
 
-fn load_fonts_and_styles(
+struct TextQueueItem {
+    string: String, // text to display when this item gets popped
+}
+
+#[derive(Resource, Default)]
+pub struct TextQueue{
+    queue: VecDeque<TextQueueItem>,
+    is_writing: bool,
+}
+
+impl TextQueue {
+    pub fn push_text(&mut self, text: &str) {
+        let Ok(string) = String::from_str(text);
+        self.queue.push_back(TextQueueItem { string });
+    }
+    
+    fn is_empty(&self) -> bool {
+        self.queue.is_empty()
+    }
+
+    fn pop_text(&mut self) -> Option<TextQueueItem> {
+        self.queue.pop_front()
+    }
+}
+
+fn load_ui(
     mut commands: Commands, 
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<Glitch>>
-
+    mut materials: ResMut<Assets<Glitch>>,
 ) {
+    // load fonts
     let font = asset_server.load::<Font>("fonts/BlockBlueprint.ttf");
 
+    // load styles
     commands.spawn((
         PrettyStyle("spark"),
         effects![
@@ -48,20 +79,77 @@ fn load_fonts_and_styles(
     ));
 }
 
-#[derive(Event)]
-pub struct SpawnText;
-
-fn spawn_text(
-    _trigger: On<SpawnText>,
+fn process_text_queue(
     mut commands: Commands, 
+    mut text_queue: ResMut<TextQueue>, 
+    mut keyboard: ResMut<ButtonInput<KeyCode>>,
+    text_box: Query<Entity, With<TextBox>>,
 ) {
+    let pressed_advance = keyboard.clear_just_pressed(KeyCode::KeyZ);
+
+    // skip text load
+    if text_queue.is_writing && pressed_advance {
+        match text_box.single() {
+            Ok(entity) => {
+                commands.entity(entity).insert(FinishTypewriter);
+            },
+            _ => unreachable!()
+        }
+    }
+
+    // display next text
+    if !text_queue.is_writing && !text_queue.is_empty() {
+        
+        let do_write = match text_box.single() {
+            Ok(entity) => {
+                if pressed_advance {
+                    // clear previous text
+                    commands.entity(entity).despawn();
+                }
+                pressed_advance
+            },
+            _ => {
+                true
+            }
+        };
+
+        if do_write {
+            // advance queue
+            let popped = text_queue.pop_text().unwrap();
+
+            // spawn text
+            commands.trigger(SpawnText(popped.string));
+            text_queue.is_writing = true;
+        }
+    }
+}
+
+#[derive(Event)]
+pub struct SpawnText(pub String);
+
+fn on_typewriter_finished(
+    _trigger: On<TypewriterFinished>,
+    mut text_queue: ResMut<TextQueue>,
+) {
+    debug!("typewriter finished");
+    text_queue.is_writing = false;
+}
+
+#[derive(Component)]
+struct TextBox;
+
+fn on_spawn_text(
+    trigger: On<SpawnText>,
+    mut commands: Commands,
+) {
+    let parsed_text = PrettyParser::spans(&trigger.0).unwrap();
     // Text with one section
     commands.spawn((
+        TextBox,
         Typewriter::new(30.),
         TypewriterIndex::glyph(),
         TextLayout::new_with_justify(Justify::Left),
-        TextBackgroundColor(BLACK.into()),
-        pretty!("[little spark....|0.2| coming from a place of such violence...|0.2| what does that make you?|1| the conditions of your existence are part of the great fabric humans have woven onto the web of the world.|1| yet, unlike the humans of this world...|0.2| your movement has only a single axis of freedom.\n|2| soar through the power lines, through ceramic containers of transmission towers, through substations that will change your nature.|1| sing your little song of spark and three-phased vibration.\n|2|i hope you are the catalyst of change.|0.2|i love you.|1|](spark)"),
+        parsed_text,
         // Set the style of the Node itself.
         Node {
             position_type: PositionType::Absolute,
@@ -73,4 +161,5 @@ fn spawn_text(
             ..default()
         },
     ));
+    
 }
