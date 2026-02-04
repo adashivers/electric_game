@@ -96,15 +96,13 @@ fn process_text_queue(
                 } else {
                     commands.entity(entity).despawn();
                 }
-                
             },
-            _ => unreachable!()
+            _ => {}
         }
     }
 
     // display next text
     if !text_queue.is_writing && !text_queue.is_empty() {
-        
         let do_write = match text_box.single() {
             Ok(entity) => {
                 if pressed_advance {
