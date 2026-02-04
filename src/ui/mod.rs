@@ -167,3 +167,26 @@ fn on_spawn_text(
     ));
     
 }
+
+/* not sure how to get this to work??
+#[cfg(test)]
+mod tests {
+    use bevy::prelude::*;
+    use super::*;
+
+    #[test]
+    fn test_queue_works() {
+        let mut app = App::new();
+        app
+            .add_plugins(MinimalPlugins)
+            .init_resource::<TextQueue>()
+            .add_observer(on_spawn_text);
+
+        app.world_mut().resource_mut::<TextQueue>().push_text("test");
+        app.update();
+        
+        assert_eq!(app.world_mut().query::<&TextBox>().iter(app.world()).len(), 1);
+    }
+
+}
+*/
